@@ -3,6 +3,8 @@ import requests
 from getpass import getpass # required for authorization token
 import paho.mqtt.publish as publish # required for message broker
 
+TOKEN = {}
+
 RPC_REQUEST = {
     "kind": "rpc_request",
     "args": {
@@ -14,9 +16,11 @@ def get_token(EMAIL, PASSWORD, SERVER='https://my.farm.bot'):
     headers = {'content-type': 'application/json'}
     user = {'user': {'email': EMAIL, 'password': PASSWORD}}
     response = requests.post(f'{SERVER}/api/tokens', headers=headers, json=user)
-    return response.json()
+    global TOKEN
+    TOKEN = response.json()
+    print('token saved')
 
-def publish_single(PAYLOAD, TOKEN):
+def publish_single(PAYLOAD):
     publish.single(
         f'bot/{TOKEN['token']['unencoded']['bot']}/from_clients',
         payload=json.dumps(PAYLOAD),
@@ -27,7 +31,7 @@ def publish_single(PAYLOAD, TOKEN):
         }
     )
 
-def e_stop(TOKEN):
+def e_stop():
     e_stop_message = {
         **RPC_REQUEST,
         "body": [{
@@ -36,9 +40,9 @@ def e_stop(TOKEN):
         }]
     }
 
-    publish_single(e_stop_message, TOKEN)
+    publish_single(e_stop_message)
 
-def unlock(TOKEN):
+def unlock():
     unlock_message = {
         **RPC_REQUEST,
         "body": [{
@@ -47,15 +51,15 @@ def unlock(TOKEN):
         }]
     }
 
-    publish_single(unlock_message, TOKEN)
+    publish_single(unlock_message)
 
-def get_info(TOKEN, SOURCE, ID=''):
+def get_info(SOURCE, ID=''):
     url = f'https:{TOKEN['token']['unencoded']['iss']}/api/'+SOURCE+'/'+ID
     headers = {'authorization': TOKEN['token']['encoded'], 'content-type': 'application/json'}
     response = requests.get(url, headers=headers)
     return json.dumps(response.json(), indent=2)
 
-def edit_info(TOKEN, SOURCE, VALUE, CHANGE, ID=''):
+def edit_info(SOURCE, VALUE, CHANGE, ID=''):
     new_value = {
         VALUE: CHANGE
     }
@@ -65,7 +69,7 @@ def edit_info(TOKEN, SOURCE, VALUE, CHANGE, ID=''):
     response = requests.patch(url, headers=headers, data=json.dumps(new_value))
     return json.dumps(response.json(), indent=2)
 
-def new_log_API(MESSAGE, CHANNEL, TYPE, VERBOSITY, TOKEN):
+def new_log_API(MESSAGE, CHANNEL, TYPE, VERBOSITY):
     new_message = {
         'message': MESSAGE,
         'channel': [CHANNEL], # Doesn't currently do anything
@@ -78,7 +82,7 @@ def new_log_API(MESSAGE, CHANNEL, TYPE, VERBOSITY, TOKEN):
     response = requests.post(url, headers=headers, data=json.dumps(new_message))
     return json.dumps(response.json(), indent=2)
 
-def new_log_BROKER(MESSAGE, TYPE, TOKEN):
+def new_log_BROKER(MESSAGE, TYPE):
     new_message = {
         **RPC_REQUEST,
         "body": [{
@@ -90,9 +94,9 @@ def new_log_BROKER(MESSAGE, TYPE, TOKEN):
         }]
     }
 
-    publish_single(new_message, TOKEN)
+    publish_single(new_message)
 
-def move_to(X, Y, Z, TOKEN):
+def move_to(X, Y, Z):
     def axis_overwrite(AXIS, VALUE):
         return {
             "kind": "axis_overwrite",
@@ -120,9 +124,9 @@ def move_to(X, Y, Z, TOKEN):
         }]
     }
 
-    publish_single(coordinates, TOKEN)
+    publish_single(coordinates)
 
-def control_peripheral(TOKEN, ID, VALUE, TYPE):
+def control_peripheral(ID, VALUE, TYPE):
     control_message = {
         **RPC_REQUEST,
         "body": [{
@@ -141,4 +145,4 @@ def control_peripheral(TOKEN, ID, VALUE, TYPE):
         }]
     }
 
-    publish_single(control_message, TOKEN)
+    publish_single(control_message)
