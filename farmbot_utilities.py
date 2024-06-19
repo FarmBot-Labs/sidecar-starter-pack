@@ -15,6 +15,7 @@ RPC_REQUEST = {
 class Farmbot():
     def __init__(self):
         self.token = None
+        self.error = None
 
     def get_token(self, EMAIL, PASSWORD, SERVER='https://my.farm.bot'):
         try:
@@ -25,29 +26,34 @@ class Farmbot():
             # Handle HTTP status codes
             if response.status_code == 200:
                 self.token = response.json()
+                self.error = None
                 return json.dumps(response.json(), indent=2)
             elif response.status_code == 404:
-                self.token = None
-                return print("ERROR: The server address does not exist.")
+                self.error = "ERROR: The server address does not exist."
+                print(self.error)
             elif response.status_code == 422:
-                self.token = None
-                return print("ERROR: Incorrect email address or password.")
+                self.error = "ERROR: Incorrect email address or password."
+                print(self.error)
             else:
-                self.token = None
-                return print(f"ERROR: Unexpected status code {response.status_code}")
+                self.error = f"ERROR: Unexpected status code {response.status_code}"
+                print(self.error)
 
         # Handle DNS resolution errors
         except requests.exceptions.RequestException as e:
-            self.token = None
             if isinstance(e, requests.exceptions.ConnectionError):
-                return print("ERROR: The server address does not exist.")
+                self.error = "ERROR: The server address does not exist."
+                print(self.error)
             elif isinstance(e, requests.exceptions.Timeout):
-                return print("ERROR: The request timed out.")
+                self.error ="ERROR: The request timed out."
+                print(self.error)
             elif isinstance(e, requests.exceptions.RequestException):
-                return print("ERROR: There was a problem with the request.")
+                self.error = "ERROR: There was a problem with the request."
+                print(self.error)
         except Exception as e:
-            self.token = None
-            return print(f"ERROR: An unexpected error occurred: {str(e)}")
+            self.error = f"ERROR: An unexpected error occurred: {str(e)}"
+            print(self.error)
+
+        self.token = None
 
     def check_token(self):
         if self.token is None:
