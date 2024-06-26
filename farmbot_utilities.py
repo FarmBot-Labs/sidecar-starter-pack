@@ -11,9 +11,6 @@ import paho.mqtt.publish as publish
 from functions_BROKER import FarmbotBroker
 from functions_API import FarmbotAPI
 
-BROKER = FarmbotBroker()
-API = FarmbotAPI()
-
 RPC_REQUEST = {
     "kind": "rpc_request",
     "args": {
@@ -23,22 +20,28 @@ RPC_REQUEST = {
 
 class Farmbot():
     def __init__(self):
+        self.token = None
+        self.error = None
+        self.broker = FarmbotBroker()
+        self.api = FarmbotAPI()
         print("")
 
-    def token(self, EMAIL, PASSWORD, SERVER):
-        self.error = API.error
-        self.token = API.get_token(EMAIL, PASSWORD, SERVER)
-        return self.token
+    def get_token(self, EMAIL, PASSWORD, SERVER):
+        token_string_output = self.api.get_token(EMAIL, PASSWORD, SERVER)
+        self.token = self.api.token
+        self.error = self.api.error
+        self.broker.token = self.token
+        return token_string_output
 
     def get_info(self, ENDPOINT, ID=''):
-        return API.get(ENDPOINT, ID)
+        return self.api.get(ENDPOINT, ID)
 
     def set_info(self, ENDPOINT, FIELD, VALUE, ID=''):
         new_value = {
             FIELD: VALUE
         }
 
-        API.patch(ENDPOINT, ID, new_value)
+        self.api.patch(ENDPOINT, ID, new_value)
 
     def new_log(self, MESSAGE, TYPE, CHANNEL='ticker', VERBOSITY='2'):
         ENDPOINT = 'logs'
@@ -51,7 +54,7 @@ class Farmbot():
             "verbosity": VERBOSITY
         }
 
-        API.post(ENDPOINT, ID, new_log_message)
+        self.api.post(ENDPOINT, ID, new_log_message)
 
     def send_message(self, MESSAGE, TYPE, CHANNEL=''):
         send_message_message = {
@@ -71,7 +74,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(send_message_message)
+        self.broker.publish(send_message_message)
 
     def move(self, X, Y, Z):
         def axis_overwrite(AXIS, VALUE):
@@ -101,7 +104,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(move_message)
+        self.broker.publish(move_message)
 
     def set_home(self, AXIS='all'):
         set_home_message = {
@@ -114,7 +117,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(set_home_message)
+        self.broker.publish(set_home_message)
 
     def find_home(self, AXIS='all', SPEED=100):
         find_home_message = {
@@ -128,7 +131,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(find_home_message)
+        self.broker.publish(find_home_message)
 
     def axis_length(self, AXIS='all'):
         axis_length_message = {
@@ -141,7 +144,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(axis_length_message)
+        self.broker.publish(axis_length_message)
 
     def control_servo(self, PIN, ANGLE):
         control_servo_message = {
@@ -155,7 +158,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(control_servo_message)
+        self.broker.publish(control_servo_message)
 
     def control_peripheral(self, ID, VALUE, MODE):
         control_peripheral_message = {
@@ -176,7 +179,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(control_peripheral_message)
+        self.broker.publish(control_peripheral_message)
 
     def toggle_peripheral(self, ID):
         toggle_peripheral_message = {
@@ -195,7 +198,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(toggle_peripheral_message)
+        self.broker.publish(toggle_peripheral_message)
 
     def read_sensor(self, ID, MODE, LABEL='---'):
         read_sensor_message = {
@@ -216,7 +219,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(read_sensor_message)
+        self.broker.publish(read_sensor_message)
 
     def take_photo(self):
         take_photo_message = {
@@ -227,7 +230,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(take_photo_message)
+        self.broker.publish(take_photo_message)
 
     def detect_weeds(self):
         detect_weeds_message = {
@@ -240,7 +243,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(detect_weeds_message)
+        self.broker.publish(detect_weeds_message)
 
     def soil_height(self):
         soil_height_message = {
@@ -253,7 +256,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(soil_height_message)
+        self.broker.publish(soil_height_message)
 
     def wait(self, TIME):
         wait_message = {
@@ -266,7 +269,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(wait_message)
+        self.broker.publish(wait_message)
 
     def if_statement(self, VARIABLE, ID, OPERATOR, VALUE, THEN_ID, ELSE_ID):
         if VARIABLE == 'position':
@@ -310,7 +313,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(if_statement_message)
+        self.broker.publish(if_statement_message)
 
     def e_stop(self):
         e_stop_message = {
@@ -321,7 +324,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(e_stop_message)
+        self.broker.publish(e_stop_message)
 
     def unlock(self):
         unlock_message = {
@@ -332,7 +335,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(unlock_message)
+        self.broker.publish(unlock_message)
 
     def reboot(self):
         reboot_message = {
@@ -345,7 +348,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(reboot_message)
+        self.broker.publish(reboot_message)
 
     def shutdown(self):
         shutdown_message = {
@@ -356,7 +359,7 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(shutdown_message)
+        self.broker.publish(shutdown_message)
 
     def assertion(self, CODE, TYPE, ID=''):
         assertion_message = {
@@ -387,4 +390,4 @@ class Farmbot():
             }]
         }
 
-        BROKER.publish(lua_message)
+        self.broker.publish(lua_message)
