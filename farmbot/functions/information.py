@@ -7,6 +7,7 @@ Information class.
 #     ├── [API] api_patch()
 #     ├── [API] api_post()
 #     ├── [API] api_delete()
+#     ├── [API] upload_photo()
 #     ├── [API] safe_z()
 #     ├── [API] garden_size()
 #     ├── [API] curve()
@@ -15,6 +16,7 @@ Information class.
 #     ├── [BROKER] read_pin()
 #     └── [BROKER] read_sensor()
 
+import json
 from .broker import BrokerConnect
 from .api import ApiConnect
 
@@ -91,6 +93,49 @@ class Information():
         self.state.print_status(update_only=True, endpoint_json=result)
 
         return result
+
+    def upload_photo(self, image_filename, position=None):
+        """Uploads a photo to the web app."""
+
+        self.state.print_status(description="Uploading a photo")
+
+        result = self.api.request(
+            method="GET", endpoint="storage_auth", database_id=None)
+        if isinstance(result, str):
+            description = "There was an error processing the request: "
+            description += self.state.error
+            self.state.print_status(description=description)
+            return self.state.error
+        http_part = "https" if self.state.ssl else "http"
+        upload_url = f'{http_part}:{result["url"]}'
+        fields = result["form_data"]
+        fields.pop("file", None)
+        with open(image_filename, "rb") as image_file:
+            response = self.api._request(
+                method='POST',
+                url=upload_url,
+                data=fields,
+                files={"file": image_file})
+
+        if (response is not None
+                and self.api.is_success(self.api.request_handling(response, True))):
+            description = "Photo uploaded successfully."
+            self.state.print_status(description=description)
+            attachment_url = f'{upload_url}{fields["key"]}'
+            payload = {
+                "attachment_url": attachment_url,
+                "meta": {"name": image_filename},
+            }
+            if position is not None:
+                payload["meta"] = {**payload["meta"], **position}
+
+            result = self.api_post(endpoint="images", payload=payload)
+            return result
+
+        description = "There was an error processing the request: "
+        description += self.state.error
+        self.state.print_status(description=description)
+        return self.state.error
 
     def safe_z(self):
         """Returns the highest safe point along the z-axis."""

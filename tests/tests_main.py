@@ -5,7 +5,7 @@ Farmbot class unit tests.
 import sys
 import json
 import unittest
-from unittest.mock import Mock, patch, call
+from unittest.mock import Mock, mock_open, patch, call
 import requests
 
 from farmbot import Farmbot
@@ -21,9 +21,15 @@ MOCK_TOKEN = {
     }
 }
 
+COMMON_ARGS = {
+    'files': None,
+    'data': None,
+}
+
 TOKEN_REQUEST_KWARGS = {
     'headers': {'content-type': 'application/json'},
     'timeout': 0,
+    **COMMON_ARGS,
 }
 
 REQUEST_KWARGS_WITH_PAYLOAD = {
@@ -32,11 +38,13 @@ REQUEST_KWARGS_WITH_PAYLOAD = {
         'content-type': 'application/json'
     },
     'timeout': 0,
+    **COMMON_ARGS,
 }
 
 REQUEST_KWARGS = {
     **REQUEST_KWARGS_WITH_PAYLOAD,
     'json': None,
+    **COMMON_ARGS,
 }
 
 
@@ -481,6 +489,92 @@ class TestFarmbot(unittest.TestCase):
         result = self.fb.api_delete('points', 12345)
         mock_request.assert_not_called()
         self.assertEqual(result, {"edit_requests_disabled": True})
+
+    @patch('builtins.open', new_callable=mock_open, read_data=b'image data')
+    @patch('requests.request')
+    def test_upload_photo(self, mock_request, mock_file):
+        '''test upload_photo function'''
+        storage_auth_response = Mock(
+            status_code=200,
+            text='text',
+        )
+        storage_auth_response.json.return_value = {
+            'url': '//storage.example/',
+            'form_data': {
+                'key': 'images/photo.jpg',
+                'file': None,
+            },
+        }
+        upload_response = Mock(status_code=204, text='')
+        image_response = Mock(status_code=200, text='text')
+        image_response.json.return_value = {'id': 123}
+        mock_request.side_effect = [
+            storage_auth_response,
+            upload_response,
+            image_response,
+        ]
+
+        result = self.fb.upload_photo(
+            'photo.jpg',
+            position={'x': 10, 'y': 20, 'z': 30},
+        )
+
+        mock_file.assert_called_once_with('photo.jpg', 'rb')
+        self.assertEqual(result, {'id': 123})
+        self.assertEqual(
+            mock_request.call_args_list[-1],
+            call(
+                method='POST',
+                url='https://my.farm.bot/api/images',
+                **REQUEST_KWARGS_WITH_PAYLOAD,
+                json={
+                    'attachment_url': (
+                        'https://storage.example/images/photo.jpg'),
+                    'meta': {
+                        'name': 'photo.jpg',
+                        'x': 10,
+                        'y': 20,
+                        'z': 30,
+                    },
+                },
+            ),
+        )
+
+    @patch('builtins.open', new_callable=mock_open)
+    @patch('requests.request')
+    def test_upload_photo_storage_auth_error(self, mock_request, mock_file):
+        '''test upload_photo when storage authorization fails'''
+        mock_response = Mock(status_code=500, text='storage auth failed')
+        mock_response.json.side_effect = JSONDecodeError('error', '', 0)
+        mock_request.return_value = mock_response
+
+        result = self.fb.upload_photo('photo.jpg')
+
+        self.assertEqual(result, self.fb.state.error)
+        mock_request.assert_called_once()
+        mock_file.assert_not_called()
+
+    @patch('builtins.open', new_callable=mock_open, read_data=b'image data')
+    @patch('requests.request')
+    def test_upload_photo_upload_error(self, mock_request, mock_file):
+        '''test upload_photo when the file upload fails'''
+        storage_auth_response = Mock(status_code=200, text='text')
+        storage_auth_response.json.return_value = {
+            'url': '//storage.example/',
+            'form_data': {
+                'key': 'images/photo.jpg',
+                'file': None,
+            },
+        }
+        upload_response = Mock(status_code=500, text='upload failed')
+        upload_response.json.side_effect = JSONDecodeError('error', '', 0)
+        mock_request.side_effect = [storage_auth_response, upload_response]
+
+        result = self.fb.upload_photo('photo.jpg')
+
+        self.assertEqual(result, self.fb.state.error)
+        mock_file.assert_called_once_with('photo.jpg', 'rb')
+        self.assertEqual(mock_request.call_count, 2)
 
     @patch('requests.request')
     def helper_test_get_curve(self, *args, **kwargs):

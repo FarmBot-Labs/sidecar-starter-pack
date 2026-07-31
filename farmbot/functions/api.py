@@ -56,6 +56,8 @@ class ApiConnect():
                 url=kwargs["url"],
                 headers=kwargs.get("headers"),
                 json=kwargs.get("json"),
+                data=kwargs.get("data"),
+                files=kwargs.get("files"),
                 timeout=kwargs.get("timeout", self.state.timeout["api"]))
         except requests.exceptions.RequestException as e:
             if isinstance(e, requests.exceptions.SSLError):

@@ -15,7 +15,7 @@ from .functions.peripherals import Peripherals
 from .functions.resources import Resources
 from .functions.tools import ToolControls
 
-VERSION = "2.1.0"
+VERSION = "2.2.0"
 
 
 class Farmbot():
@@ -158,6 +158,10 @@ class Farmbot():
     def api_delete(self, endpoint, database_id=None, payload=None):
         """Delete information contained within an endpoint."""
         return self.info.api_delete(endpoint, database_id, payload)
+
+    def upload_photo(self, filename, position=None):
+        """Uploads a photo to the web app."""
+        return self.info.upload_photo(filename, position)
 
     def safe_z(self):
         """Returns the highest safe point along the z-axis."""
